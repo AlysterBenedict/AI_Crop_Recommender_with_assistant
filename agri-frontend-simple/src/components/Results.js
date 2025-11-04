@@ -1,7 +1,9 @@
 import React from 'react';
 import { FaSpinner, FaExclamationTriangle, FaChartBar, FaSeedling, FaTrophy } from 'react-icons/fa';
+import Chatbot from './Chatbot'; // <-- IMPORT THE NEW COMPONENT
 
-const Results = ({ predictions, loading, error }) => {
+// --- MODIFICATION: Accept 'inputs' prop ---
+const Results = ({ predictions, loading, error, inputs }) => {
   
   // 1. Loading State
   if (loading) {
@@ -133,6 +135,12 @@ const Results = ({ predictions, loading, error }) => {
           <strong style={{ color: '#ffffff' }}>💡 Pro Tip:</strong> Consider local market demand 
           and your farming experience when making final decisions.
         </div>
+
+        {/* --- MODIFICATION: ADD THE CHATBOT COMPONENT --- */}
+        {/* Pass the context (inputs and predictions) to the chatbot */}
+        <Chatbot inputs={inputs} predictions={predictions} />
+        {/* --- END OF MODIFICATION --- */}
+        
       </div>
     );
   }

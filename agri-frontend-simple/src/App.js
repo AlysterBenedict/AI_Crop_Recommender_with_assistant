@@ -13,6 +13,11 @@ function App() {
   const [predictions, setPredictions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // --- MODIFICATION ---
+  // Store the form data to pass to the chatbot
+  const [currentInputs, setCurrentInputs] = useState(null); 
+  // --- END OF MODIFICATION ---
 
   /**
    * Function to call the FastAPI backend
@@ -22,6 +27,10 @@ function App() {
     setLoading(true);
     setError(null);
     setPredictions(null);
+
+    // --- MODIFICATION ---
+    setCurrentInputs(formData); // Save the form data
+    // --- END OF MODIFICATION ---
 
     try {
       // Send a POST request to the backend
@@ -63,7 +72,15 @@ function App() {
             
             {/* Results Section */}
             <div className="card results-card">
-              <Results predictions={predictions} loading={loading} error={error} />
+              {/* --- MODIFICATION --- */}
+              {/* Pass the inputs prop down to Results */}
+              <Results 
+                predictions={predictions} 
+                loading={loading} 
+                error={error}
+                inputs={currentInputs} 
+              />
+              {/* --- END OF MODIFICATION --- */}
             </div>
           </div>
         </div>

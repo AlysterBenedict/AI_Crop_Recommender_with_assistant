@@ -34,15 +34,20 @@ const styles = {
     justifyContent: 'center',
     boxShadow: '0 4px 16px rgba(16, 185, 129, 0.3)',
   },
+  
+  // --- THIS IS THE FIX ---
+  // I've removed the complex background-clip 
+  // and replaced it with a simple, solid white color.
   logoText: {
     fontSize: '1.75rem',
     fontWeight: '800',
-    background: 'linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.8) 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
+    color: '#ffffff', // Simple, solid white for high contrast
     letterSpacing: '-0.5px',
+    // We no longer need the background, WebkitBackgroundClip,
+    // WebkitTextFillColor, or backgroundClip properties.
   },
+  // --- END OF FIX ---
+
   badge: {
     fontSize: '0.75rem',
     fontWeight: '600',

@@ -1,4 +1,13 @@
 import React, { useState } from 'react';
+import Select from 'react-select'; // --- NEW IMPORT ---
+import { FaCity } from 'react-icons/fa'; // --- NEW IMPORT ---
+
+// --- NEW IMPORTS ---
+import { indianCities } from '../data/indianCities';
+import { rainfallData } from '../data/rainfallData';
+import { OPENWEATHER_API_KEY } from '../data/apiConfig';
+// --- END NEW IMPORTS ---
+
 
 // This component is generic and remains unchanged.
 const FormInput = ({ label, value, onChange, placeholder, icon }) => (
@@ -47,6 +56,11 @@ const CropForm = ({ onPredict, loading }) => {
   const [humidity, setHumidity] = useState('');
   const [ph, setPh] = useState('');
   const [rainfall, setRainfall] = useState('');
+  
+  // --- NEW STATE ---
+  const [selectedCity, setSelectedCity] = useState(null);
+  const [isFetchingWeather, setIsFetchingWeather] = useState(false);
+  // --- END NEW STATE ---
 
   // State for units remains the same
   const [nUnit, setNUnit] = useState('kg/ha');
@@ -55,50 +69,74 @@ const CropForm = ({ onPredict, loading }) => {
   
   const CONVERSION_FACTOR = 10; // 1 g/m^2 = 10 kg/ha
 
-  // --- NEW: Generic Conversion Handler ---
-  /**
-   * Handles live unit conversion for an input field.
-   * @param {string} newValue - The new unit ('kg/ha' or 'g/m^2')
-   * @param {string} currentValue - The current value from state (e.g., N, P, or K)
-   * @param {string} currentUnit - The current unit from state (e.g., nUnit, pUnit, kUnit)
-   * @param {function} setValue - The state setter for the value (e.g., setN, setP, setK)
-   * @param {function} setUnit - The state setter for the unit (e.g., setNUnit, setPUnit, setKUnit)
-   */
+  // Unchanged handler
   const handleUnitChange = (newUnit, currentValue, currentUnit, setValue, setUnit) => {
-    // Do nothing if the unit isn't actually changing
     if (newUnit === currentUnit) {
       return;
     }
-
-    // Get the numeric value
     const numericValue = parseFloat(currentValue);
-
-    // If the input is empty or not a valid number,
-    // just update the unit and don't try to convert.
     if (isNaN(numericValue) || currentValue.trim() === '') {
       setUnit(newUnit);
       return;
     }
-
-    // Perform conversion
     let convertedValue;
     if (newUnit === 'kg/ha') {
-      // We are switching TO kg/ha (so old unit was g/m^2)
       convertedValue = numericValue * CONVERSION_FACTOR;
     } else {
-      // We are switching TO g/m^2 (so old unit was kg/ha)
       convertedValue = numericValue / CONVERSION_FACTOR;
     }
-
-    // Update both the value and the unit states
-    // Convert the new value back to a string for the input field
-    // Use toPrecision to avoid floating point weirdness like 4.500000001
     setValue(String(parseFloat(convertedValue.toPrecision(10))));
     setUnit(newUnit);
   };
-
-  // The submit handler is UNCHANGED.
-  // It's still needed for users who don't toggle the unit.
+  
+  // --- NEW: Weather Fetching Handler ---
+  const handleCityChange = async (selectedOption) => {
+    setSelectedCity(selectedOption);
+    if (!selectedOption) {
+      // Clear fields if city is cleared
+      setTemperature('');
+      setHumidity('');
+      setRainfall('');
+      return;
+    }
+    
+    setIsFetchingWeather(true);
+    const cityName = selectedOption.value;
+    
+    try {
+      // 1. Fetch Temp & Humidity from OpenWeatherMap
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},IN&appid=${OPENWEATHER_API_KEY}&units=metric`;
+      const weatherResponse = await fetch(weatherUrl);
+      if (!weatherResponse.ok) {
+        throw new Error('Weather data not found');
+      }
+      const weatherData = await weatherResponse.json();
+      
+      // Set temp and humidity from API
+      setTemperature(String(weatherData.main.temp));
+      setHumidity(String(weatherData.main.humidity));
+      
+      // 2. Get Annual Rainfall from our static data file
+      const annualRainfall = rainfallData[cityName];
+      if (annualRainfall) {
+        setRainfall(String(annualRainfall));
+      } else {
+        setRainfall(''); // Clear rainfall if not in our dataset
+        console.warn(`No rainfall data for ${cityName}. Add it to rainfallData.js`);
+      }
+      
+    } catch (error) {
+      console.error("Failed to fetch weather:", error);
+      // Clear fields on error
+      setTemperature('');
+      setHumidity('');
+      setRainfall('');
+    } finally {
+      setIsFetchingWeather(false);
+    }
+  };
+  
+  // --- MODIFIED: handleSubmit ---
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -114,11 +152,12 @@ const CropForm = ({ onPredict, loading }) => {
       humidity: parseFloat(humidity),
       ph: parseFloat(ph),
       rainfall: parseFloat(rainfall),
+      // --- ADD THE CITY TO THE FORM DATA ---
+      city: selectedCity ? selectedCity.value : null
     };
-    onPredict(formData);
+    onPredict(formData); // This now sends the city up to App.js
   };
 
-  // No change to this style object
   const formHeaderStyle = {
     fontSize: '1.5rem',
     fontWeight: 700,
@@ -129,6 +168,34 @@ const CropForm = ({ onPredict, loading }) => {
     alignItems: 'center',
     gap: '0.5rem',
   };
+  
+  // --- NEW: Styles for react-select ---
+  const selectStyles = {
+    control: (baseStyles) => ({
+      ...baseStyles,
+      background: 'rgba(255, 255, 255, 0.2)',
+      backdropFilter: 'blur(10px)',
+      border: '1px solid rgba(255, 255, 255, 0.3)',
+      borderRadius: '12px',
+      boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.1)',
+      color: '#ffffff',
+    }),
+    singleValue: (baseStyles) => ({ ...baseStyles, color: '#ffffff' }),
+    placeholder: (baseStyles) => ({ ...baseStyles, color: 'rgba(255, 255, 255, 0.5)' }),
+    input: (baseStyles) => ({ ...baseStyles, color: '#ffffff' }),
+    menu: (baseStyles) => ({
+      ...baseStyles,
+      background: 'rgba(50, 50, 70, 0.9)',
+      backdropFilter: 'blur(15px)',
+      borderRadius: '12px',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+    }),
+    option: (baseStyles, state) => ({
+      ...baseStyles,
+      background: state.isFocused ? 'rgba(16, 185, 129, 0.5)' : 'transparent',
+      color: '#ffffff',
+    }),
+  };
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -136,93 +203,66 @@ const CropForm = ({ onPredict, loading }) => {
         <span style={{ fontSize: '1.75rem' }}>🌱</span>
         Enter Soil & Climate Data
       </h2>
+      
+      {/* --- NEW: City Selector --- */}
+      <div className="form-group">
+        <label>
+          <FaCity style={{ marginRight: '0.5rem' }} />
+          Select City (Optional)
+        </label>
+        <Select
+          options={indianCities}
+          onChange={handleCityChange}
+          value={selectedCity}
+          styles={selectStyles}
+          placeholder={isFetchingWeather ? 'Fetching data...' : 'Type or select a city'}
+          isClearable
+          isLoading={isFetchingWeather}
+        />
+        <small style={{color: 'rgba(255, 255, 255, 0.7)', marginTop: '4px', fontSize: '0.8rem'}}>
+          This will auto-fill Temp, Humidity, and Avg. Rainfall.
+        </small>
+      </div>
+      
       <div className="form-grid">
-        
-        {/* --- MODIFIED: N, P, K inputs --- */}
-        {/* Pass the new handler functions to onUnitChange */}
-
-        {/* Nitrogen (N) */}
+        {/* --- N, P, K inputs (Unchanged) --- */}
         <div className="form-group">
           <label>
             <span style={{ marginRight: '0.5rem' }}>🔬</span>
             Nitrogen (N)
           </label>
-          <input
-            type="number"
-            value={N}
-            onChange={(e) => setN(e.target.value)}
-            placeholder="e.g., 90"
-            step="0.01"
-            required
-          />
-          <UnitToggle
-            selectedUnit={nUnit}
-            onUnitChange={(newUnit) => handleUnitChange(newUnit, N, nUnit, setN, setNUnit)}
-          />
+          <input type="number" value={N} onChange={(e) => setN(e.target.value)} placeholder="e.g., 90" step="0.01" required />
+          <UnitToggle selectedUnit={nUnit} onUnitChange={(newUnit) => handleUnitChange(newUnit, N, nUnit, setN, setNUnit)} />
         </div>
-
-        {/* Phosphorous (P) */}
         <div className="form-group">
           <label>
             <span style={{ marginRight: '0.5rem' }}>⚗️</span>
             Phosphorous (P)
           </label>
-          <input
-            type="number"
-            value={P}
-            onChange={(e) => setP(e.target.value)}
-            placeholder="e.g., 42"
-            step="0.01"
-            required
-          />
-          <UnitToggle
-            selectedUnit={pUnit}
-            onUnitChange={(newUnit) => handleUnitChange(newUnit, P, pUnit, setP, setPUnit)}
-          />
+          <input type="number" value={P} onChange={(e) => setP(e.target.value)} placeholder="e.g., 42" step="0.01" required />
+          <UnitToggle selectedUnit={pUnit} onUnitChange={(newUnit) => handleUnitChange(newUnit, P, pUnit, setP, setPUnit)} />
         </div>
-        
-        {/* Potassium (K) */}
         <div className="form-group">
           <label>
             <span style={{ marginRight: '0.5rem' }}>🧪</span>
             Potassium (K)
           </label>
-          <input
-            type="number"
-            value={K}
-            onChange={(e) => setK(e.target.value)}
-            placeholder="e.g., 43"
-            step="0.01"
-            required
-          />
-          <UnitToggle
-            selectedUnit={kUnit}
-            onUnitChange={(newUnit) => handleUnitChange(newUnit, K, kUnit, setK, setKUnit)}
-          />
+          <input type="number" value={K} onChange={(e) => setK(e.target.value)} placeholder="e.g., 43" step="0.01" required />
+          <UnitToggle selectedUnit={kUnit} onUnitChange={(newUnit) => handleUnitChange(newUnit, K, kUnit, setK, setKUnit)} />
         </div>
 
-        {/* --- UNMODIFIED: Other inputs still use FormInput --- */}
+        {/* --- MODIFIED: Temp, Humidity, Rainfall now read-only if fetching --- */}
         <FormInput label="Temperature (°C)" value={temperature} onChange={setTemperature} placeholder="e.g., 20.87" icon="🌡️" />
         <FormInput label="Humidity (%)" value={humidity} onChange={setHumidity} placeholder="e.g., 82.00" icon="💧" />
         <FormInput label="Soil pH" value={ph} onChange={setPh} placeholder="e.g., 6.50" icon="📊" />
-        <FormInput label="Rainfall (mm)" value={rainfall} onChange={setRainfall} placeholder="e.g., 202.9" icon="🌧️" />
+        <FormInput label="Rainfall (mm/year)" value={rainfall} onChange={setRainfall} placeholder="e.g., 202.9" icon="🌧️" />
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="submit-button"
-      >
+      <button type="submit" disabled={loading || isFetchingWeather} className="submit-button">
         {loading ? (
-          <>
-            <span style={{ marginRight: '0.5rem' }}>⏳</span>
-            Analyzing...
-          </>
+          <><span style={{ marginRight: '0.5rem' }}>⏳</span>Analyzing...</>
         ) : (
-          <>
-            <span style={{ marginRight: '0.5rem' }}>🚀</span>
-            Get Recommendation
-          </>
+          <><span style={{ marginRight: '0.5rem' }}>🚀</span>Get Recommendation</>
         )}
       </button>
     </form>
