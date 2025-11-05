@@ -60,7 +60,7 @@ const Results = ({ predictions, loading, error, inputs, forecast }) => {
         'cotton': '🌸', 'jute': '🌿', 'coffee': '☕', 'apple': '🍎',
         'banana': '🍌', 'mango': '🥭', 'grapes': '🍇', 'watermelon': '🍉',
         'orange': '🍊', 'papaya': '🫒', 'coconut': '🥥', 'chickpea': '🫘',
-        'kidneybeans': '🫘', 'pigeonpeas': '_s, 'mothbeans': '🫘',
+        'kidneybeans': '🫘', 'pigeonpeas': '🫘', 'mothbeans': '🫘', // <-- THIS LINE IS FIXED
         'mungbean': '🫘', 'blackgram': '🫘', 'lentil': '🫘', 'pomegranate': '🍎',
       };
       return emojiMap[crop.toLowerCase()] || '🌱';

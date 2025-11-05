@@ -110,22 +110,9 @@
   display: inline-block;
 }
 
-.title-section h1::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 200%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  animation: titleShimmer 4s ease-in-out infinite 1s;
-}
 
-@keyframes titleShimmer {
-  0% { left: -100%; }
-  50% { left: 100%; }
-  100% { left: 100%; }
-}
+
+
 
 .title-section p {
   font-size: 1.25rem;
@@ -177,29 +164,7 @@
   overflow: hidden;
 }
 
-/* Card Shine Effect */
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -75%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-  transform: skewX(-25deg);
-  animation: cardShine 5s ease-in-out infinite 2s;
-}
 
-@keyframes cardShine {
-  0% { left: -75%; }
-  50% { left: 125%; }
-  100% { left: 125%; }
-}
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(30px); }
@@ -1088,9 +1053,9 @@
   bottom: calc(2rem + 70px);
   right: 2rem;
   z-index: 1000;
-  
+  background: rgba(0, 0, 0, 0.25);
   background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px);
   padding: 2rem;
   border-radius: 24px;
   box-shadow: 
