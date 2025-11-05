@@ -34,20 +34,12 @@ const styles = {
     justifyContent: 'center',
     boxShadow: '0 4px 16px rgba(16, 185, 129, 0.3)',
   },
-  
-  // --- THIS IS THE FIX ---
-  // I've removed the complex background-clip 
-  // and replaced it with a simple, solid white color.
   logoText: {
     fontSize: '1.75rem',
     fontWeight: '800',
-    color: '#ffffff', // Simple, solid white for high contrast
+    color: '#ffffff',
     letterSpacing: '-0.5px',
-    // We no longer need the background, WebkitBackgroundClip,
-    // WebkitTextFillColor, or backgroundClip properties.
   },
-  // --- END OF FIX ---
-
   badge: {
     fontSize: '0.75rem',
     fontWeight: '600',
@@ -62,7 +54,8 @@ const styles = {
   }
 };
 
-const Header = () => {
+// --- MODIFIED: Add onNavWeather and weatherAvailable props ---
+const Header = ({ onNavHome, onNavResults, onNavWeather, resultsAvailable, weatherAvailable }) => {
   return (
     <header style={styles.header}>
       <nav style={styles.nav}>
@@ -72,6 +65,30 @@ const Header = () => {
           </div>
           <span style={styles.logoText}>AgriPredict</span>
         </div>
+
+        {/* --- MODIFIED: Added Weather Button --- */}
+        <div className="nav-buttons">
+          <button className="nav-btn" onClick={onNavHome}>
+            Home
+          </button>
+          <button 
+            className="nav-btn" 
+            onClick={onNavResults} 
+            disabled={!resultsAvailable}
+          >
+            Results
+          </button>
+          {/* --- NEW BUTTON --- */}
+          <button 
+            className="nav-btn" 
+            onClick={onNavWeather} 
+            disabled={!weatherAvailable}
+          >
+            Weather
+          </button>
+        </div>
+        {/* --- END OF MODIFICATION --- */}
+        
         <div style={styles.badge}>AI-Powered</div>
       </nav>
     </header>

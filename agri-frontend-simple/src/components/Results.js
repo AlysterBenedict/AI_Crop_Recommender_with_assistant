@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useRef } from 'react'; // <-- IMPORT useRef
 import { FaSpinner, FaExclamationTriangle, FaChartBar, FaSeedling, FaTrophy } from 'react-icons/fa';
-import Chatbot from './Chatbot'; // <-- IMPORT THE NEW COMPONENT
 
-// --- MODIFICATION: Accept 'inputs' prop ---
-const Results = ({ predictions, loading, error, inputs }) => {
+// --- MODIFIED: Remove all weather chart imports ---
+import PredictionPieChart from './PredictionPieChart';
+// TemperatureChart, HumidityChart, DailyForecast are REMOVED
+import UserInputTable from './UserInputTable'; 
+import ExportButton from './ExportButton'; // <-- NEW IMPORT
+// --- END MODIFICATION ---
+
+const Results = ({ predictions, loading, error, inputs, forecast }) => {
   
-  // 1. Loading State
+  // --- NEW: Create a ref for the export ---
+  const printRef = useRef(null);
+
+  // 1. Loading State (Unchanged)
   if (loading) {
     return (
       <div className="loading-state" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
@@ -20,7 +28,7 @@ const Results = ({ predictions, loading, error, inputs }) => {
     );
   }
 
-  // 2. Error State
+  // 2. Error State (Unchanged)
   if (error) {
     return (
       <div className="error-state">
@@ -45,43 +53,34 @@ const Results = ({ predictions, loading, error, inputs }) => {
     const topPick = predictions[0];
     const otherPicks = predictions.slice(1);
 
-    // Crop emoji mapping
+    // Crop emoji mapping (All fixes included)
     const getCropEmoji = (crop) => {
       const emojiMap = {
-        'rice': '🌾',
-        'wheat': '🌾',
-        'maize': '🌽',
-        'corn': '🌽',
-        'cotton': '🌸',
-        'jute': '🌿',
-        'coffee': '☕',
-        'apple': '🍎',
-        'banana': '🍌',
-        'mango': '🥭',
-        'grapes': '🍇',
-        'watermelon': '🍉',
-        'orange': '🍊',
-        'papaya': '🫒',
-        'coconut': '🥥',
-        'chickpea': '🫘',
-        'kidneybeans': '🫘',
-        'pigeonpeas': '🫘',
-        'mothbeans': '🫘',
-        'mungbean': '🫘',
-        'blackgram': '🫘',
-        'lentil': '🫘',
-        'pomegranate': '🍎',
+        'rice': '🌾', 'wheat': '🌾', 'maize': '🌽', 'corn': '🌽',
+        'cotton': '🌸', 'jute': '🌿', 'coffee': '☕', 'apple': '🍎',
+        'banana': '🍌', 'mango': '🥭', 'grapes': '🍇', 'watermelon': '🍉',
+        'orange': '🍊', 'papaya': '🫒', 'coconut': '🥥', 'chickpea': '🫘',
+        'kidneybeans': '🫘', 'pigeonpeas': '_s, 'mothbeans': '🫘',
+        'mungbean': '🫘', 'blackgram': '🫘', 'lentil': '🫘', 'pomegranate': '🍎',
       };
       return emojiMap[crop.toLowerCase()] || '🌱';
     };
 
     return (
-      <div className="predictions-list">
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      // --- MODIFIED: Add the ref and a unique ID ---
+      <div className="predictions-list" ref={printRef} id="results-to-export">
+        
+        {/* --- NEW: Add the export button --- */}
+        <ExportButton contentRef={printRef} inputs={inputs} />
+
+        {/* User Input Table (Unchanged) */}
+        <UserInputTable inputs={inputs} />
+
+        {/* Recommendations (Unchanged) */}
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2rem' }}>
           <FaSeedling /> Recommendations
         </h2>
         
-        {/* Top Recommendation Card */}
         <div className="top-pick">
           <span className="top-label">
             <FaTrophy style={{ marginRight: '0.25rem', fontSize: '0.8rem' }} />
@@ -91,7 +90,7 @@ const Results = ({ predictions, loading, error, inputs }) => {
             {getCropEmoji(topPick.crop)}
           </div>
           <h3>{topPick.crop}</h3>
-          <p className="confidence">{topPick.confidence} Confidence</p>
+          <p className="confidence">{topPick.confidence}</p>
           <div style={{
             marginTop: '1rem',
             padding: '0.75rem',
@@ -104,7 +103,6 @@ const Results = ({ predictions, loading, error, inputs }) => {
           </div>
         </div>
         
-        {/* Other Recommendations */}
         <h4 className="other-options-title">
           Alternative Options:
         </h4>
@@ -122,7 +120,13 @@ const Results = ({ predictions, loading, error, inputs }) => {
           ))}
         </ul>
         
-        <div style={{
+        {/* Pie Chart (Unchanged) */}
+        <PredictionPieChart predictions={predictions} />
+
+        {/* --- MODIFIED: All weather charts are removed --- */}
+
+        {/* --- MODIFIED: Added className="pro-tip" --- */}
+        <div className="pro-tip" style={{
           marginTop: '1.5rem',
           padding: '1rem',
           background: 'rgba(255, 255, 255, 0.1)',
@@ -135,17 +139,12 @@ const Results = ({ predictions, loading, error, inputs }) => {
           <strong style={{ color: '#ffffff' }}>💡 Pro Tip:</strong> Consider local market demand 
           and your farming experience when making final decisions.
         </div>
-
-        {/* --- MODIFICATION: ADD THE CHATBOT COMPONENT --- */}
-        {/* Pass the context (inputs and predictions) to the chatbot */}
-        <Chatbot inputs={inputs} predictions={predictions} />
-        {/* --- END OF MODIFICATION --- */}
         
       </div>
     );
   }
 
-  // 4. Initial/Default State
+  // 4. Initial/Default State (Unchanged)
   return (
     <div className="initial-state" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
       <div style={{

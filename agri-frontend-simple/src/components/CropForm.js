@@ -5,7 +5,7 @@ import { FaCity } from 'react-icons/fa'; // --- NEW IMPORT ---
 // --- NEW IMPORTS ---
 import { indianCities } from '../data/indianCities';
 import { rainfallData } from '../data/rainfallData';
-import { OPENWEATHER_API_KEY } from '../data/apiConfig';
+// --- OPENWEATHER_API_KEY is no longer imported here ---
 // --- END NEW IMPORTS ---
 
 
@@ -60,6 +60,7 @@ const CropForm = ({ onPredict, loading }) => {
   // --- NEW STATE ---
   const [selectedCity, setSelectedCity] = useState(null);
   const [isFetchingWeather, setIsFetchingWeather] = useState(false);
+  const [forecast, setForecast] = useState(null); // <-- Store forecast
   // --- END NEW STATE ---
 
   // State for units remains the same
@@ -89,9 +90,11 @@ const CropForm = ({ onPredict, loading }) => {
     setUnit(newUnit);
   };
   
-  // --- NEW: Weather Fetching Handler ---
+  // --- MODIFIED: Weather Fetching Handler ---
   const handleCityChange = async (selectedOption) => {
     setSelectedCity(selectedOption);
+    setForecast(null); // Clear previous forecast
+
     if (!selectedOption) {
       // Clear fields if city is cleared
       setTemperature('');
@@ -104,17 +107,19 @@ const CropForm = ({ onPredict, loading }) => {
     const cityName = selectedOption.value;
     
     try {
-      // 1. Fetch Temp & Humidity from OpenWeatherMap
-      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName},IN&appid=${OPENWEATHER_API_KEY}&units=metric`;
+      // 1. Fetch Temp, Humidity, and Forecast from OUR backend
+      const weatherUrl = `http://127.0.0.1:8000/weather-forecast?city=${cityName}`;
       const weatherResponse = await fetch(weatherUrl);
+      
       if (!weatherResponse.ok) {
         throw new Error('Weather data not found');
       }
       const weatherData = await weatherResponse.json();
       
       // Set temp and humidity from API
-      setTemperature(String(weatherData.main.temp));
-      setHumidity(String(weatherData.main.humidity));
+      setTemperature(String(weatherData.current.temp));
+      setHumidity(String(weatherData.current.humidity));
+      setForecast(weatherData.forecast); // <-- Save the forecast
       
       // 2. Get Annual Rainfall from our static data file
       const annualRainfall = rainfallData[cityName];
@@ -152,10 +157,11 @@ const CropForm = ({ onPredict, loading }) => {
       humidity: parseFloat(humidity),
       ph: parseFloat(ph),
       rainfall: parseFloat(rainfall),
-      // --- ADD THE CITY TO THE FORM DATA ---
       city: selectedCity ? selectedCity.value : null
     };
-    onPredict(formData); // This now sends the city up to App.js
+    
+    // --- Pass the forecast data up to App.js ---
+    onPredict(formData, forecast);
   };
 
   const formHeaderStyle = {

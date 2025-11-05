@@ -1,10 +1,13 @@
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import joblib
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
-from typing import List, Dict, Any, Optional # --- MODIFIED: Import Optional ---
+from typing import List, Dict, Any, Optional
+
+# --- NEW: Import the API key from our new config file ---
+from apiConfig import OPENWEATHER_API_KEY 
 
 # --- System Prompt for the Chatbot (Unchanged) ---
 SYSTEM_PROMPT = """You are AgriBot, an expert agricultural specialist and crop advisor AI. Your primary goal is to provide short, concise, and clear advice to a farmer.
@@ -33,7 +36,7 @@ app.add_middleware(
 LM_STUDIO_URL = "http://127.0.0.1:1234/v1/chat/completions"
 
 
-# --- Pydantic Models ---
+# --- Pydantic Models (Unchanged) ---
 
 # This model is *only* for the /predict endpoint
 class CropData(BaseModel):
@@ -44,9 +47,8 @@ class CropData(BaseModel):
     humidity: float
     ph: float
     rainfall: float
-    city: Optional[str] = None # Add city here too, so the ML model just ignores it
+    city: Optional[str] = None 
 
-# --- NEW: A separate model for the chatbot's context ---
 # This allows 'city' to be part of the chat context
 class ChatContextData(BaseModel):
     N: int
@@ -56,27 +58,26 @@ class ChatContextData(BaseModel):
     humidity: float
     ph: float
     rainfall: float
-    city: Optional[str] = None # Make city optional
+    city: Optional[str] = None
 
 class Prediction(BaseModel):
     crop: str
     confidence: str
 
-# --- MODIFIED: ChatInput now uses the new context model ---
+# ChatInput now uses the new context model
 class ChatInput(BaseModel):
     user_query: str
-    inputs: ChatContextData        # <-- Use the new model
+    inputs: ChatContextData
     predictions: List[Prediction]
 
 
-# --- Helper Function for Chat (MODIFIED) ---
+# --- Helper Function for Chat (Unchanged) ---
 
 def _build_context_prompt(inputs: ChatContextData, predictions: List[Prediction]) -> str:
     """Builds the context string to be sent to the LLM."""
     
     pred_list = "\n".join([f"- {p.crop} ({p.confidence})" for p in predictions])
     
-    # --- NEW: Dynamically add city if it exists ---
     city_line = f"- Location: {inputs.city}\n" if inputs.city else ""
     
     return f"""
@@ -97,8 +98,8 @@ The analysis tool provided these top 3 recommendations:
 --- END OF CONTEXT ---
 """
 
-# --- API Endpoint: Crop Prediction (MODIFIED) ---
-# We must now exclude 'city' before sending data to the ML model
+# --- API Endpoint: Crop Prediction (FIXED) ---
+# This is the original, working code that I accidentally removed.
 model = joblib.load('Crop_Model.joblib')
 
 @app.post('/predict')
@@ -112,11 +113,61 @@ def predict_crop(data: CropData):
     top_3_crops = prob_each_crop[0:3]
     result = [{"crop": crop, "confidence": f"{prob*100:.2f}%"} for crop, prob in top_3_crops]
     return {"top_3_recommended_crops": result}
+# --- END OF FIX ---
 
 
-# --- API Endpoint: Chatbot Proxy (MODIFIED) ---
-# It now uses the new _build_context_prompt logic automatically
+# --- NEW: Weather Forecast Endpoint (This part is new and correct) ---
+@app.get('/weather-forecast')
+async def get_weather_forecast(city: str):
+    """
+    Fetches current weather and 5-day forecast from OpenWeatherMap.
+    The free plan provides a 5-day forecast with 3-hour intervals.
+    """
+    if not OPENWEATHER_API_KEY:
+        raise HTTPException(status_code=500, detail="Weather API key not configured")
 
+    WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
+    FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"
+    
+    params = {
+        'q': f"{city},IN",
+        'appid': OPENWEATHER_API_KEY,
+        'units': 'metric'
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # 1. Fetch Current Weather
+            current_response = await client.get(WEATHER_URL, params=params)
+            current_response.raise_for_status()
+            current_data = current_response.json()
+            
+            # 2. Fetch 5-Day Forecast
+            forecast_response = await client.get(FORECAST_URL, params=params)
+            forecast_response.raise_for_status()
+            forecast_data = forecast_response.json()
+            
+            # 3. Combine and return
+            return {
+                "current": {
+                    "temp": current_data['main']['temp'],
+                    "humidity": current_data['main']['humidity']
+                },
+                "forecast": forecast_data['list'] # 'list' contains the 3-hour array
+            }
+
+    except httpx.RequestError as exc:
+        print(f"An error occurred while requesting weather data: {exc!r}")
+        raise HTTPException(status_code=503, detail="Could not connect to weather service")
+    except httpx.HTTPStatusError as exc:
+        print(f"Weather service returned an error: {exc!r}")
+        raise HTTPException(status_code=exc.response.status_code, detail="Error from weather service")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e!r}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
+
+
+# --- API Endpoint: Chatbot Proxy (Unchanged) ---
 @app.post('/chat')
 async def chat_with_bot(data: ChatInput):
     """
